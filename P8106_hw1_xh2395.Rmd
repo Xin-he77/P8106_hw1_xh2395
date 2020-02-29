@@ -48,14 +48,19 @@ set.seed(2020)
 ##### (1) Fit a linear model using least squares on the training data
 
 ```{r}
-lm_fit = lm(train$Solubility ~ ., data = train)
+train_X = model.matrix(Solubility~.,train)[,-1]
+train_Y = train$Solubility
+train_control = trainControl(method = "cv",number = 10)
+lm_fit = train(
+    x = train_X,
+    y = train_Y, 
+    method = 'lm',
+    trControl = train_control,
+    metric = 'RMSE'
+)
 
 # summary(lm_fit)
 # There are too many predicators so I do not show the result
-
-par(mfrow = c(2,2))
-
-plot(lm_fit)
 ```
 
 ##### (2) Calculate the mean square error using the test data
@@ -172,7 +177,7 @@ pcr_test_mse
 pcr_fit$bestTune
 ```
 
-The value of M selected by cross-validation is 178. The mean square error using the test data is 0.5264698.
+The value of M selected by cross-validation is `r pcr_fit$bestTune`. The mean square error using the test data is `r pcr_test_mse`.
 
 #### e. Briefly discuss the results obtained in a~d
 
@@ -182,9 +187,20 @@ mse_table = tibble(
     linear_model =  0.5558898,
     ridege = 0.5134603,
     lasso = 0.5005751,
-    pcr = 0.5264698 
+    pcr = 0.5497181
 )
 mse_table %>% knitr::kable(digits = 4)
+```
+
+```{r}
+resamp = resamples(list(lm = lm_fit,
+                        ridge = ridge_fit,
+                        lasso = lasso_fit,
+                        pcr = pcr_fit))
+
+summary(resamp)
+
+bwplot(resamp, metric = "RMSE")
 ```
 
 By comparing the test mean square errors, we can see that the linear regression model performs worst and the principle component regression model also performs badly in the test data. The lasso model performs best. The ridge model performs better than the principle component regression model, but worse than the lasso model.   
